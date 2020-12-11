@@ -1,0 +1,73 @@
+
+kRtspProxyd  -  kernel Rtsp Proxy daemon
+------------------------------------
+
+Kaiqin Fan, Sep. 2003 Release
+
+Licensed under the terms of the GNU General Public License
+
+1. Introduction
+---------------
+   kRtspProxyd is a kernel-level Rtsp/Rtp proxy daemon, which can be deployed between 
+   streaming servers on the Internet and clients in LAN  to make the streaming resources 
+   available to the clients who cannot access them directly. The next step is to implement 
+   caching function based on the existing proxy system. 
+   
+2. How to Start  
+--------------
+   0) confirm that your machine is running with Linux kernel 2.4.20 or upper  
+   1) compile and load the module
+   2) configure the module in /proc/sys/net/krtsproxyd if needed
+   3) echo 1 > /proc/sys/net/krtsproxyd/start
+
+   unloading:
+ 
+   echo 1 > /proc/sys/net/krtsproxyd/stop
+   echo 1 > /proc/sys/net/krtsproxyd/unload 
+   rmmod krtspproxyd
+   
+3. Configuration 
+----------------
+
+   1) Install and configure the streaming server and the video player
+       (Darwing Streaming Server and QuickTime player is recommondated and you can download 
+        them on the Apple's website easily if you can apply to the license of Apple. After the setup, you should config QuickTime player to make sure
+        the proxy server address is configured exactly and the proxy port is 554)
+
+   2) Install kRtspProxyd in the machine which is chosen to be the proxy server and config it exactly
+      
+   3) Open a clip in the QuickTime player(using IP address rather than domamename) to try the kernel-level proxy.
+
+4. Parameters
+-------------
+   The following parameters are settable through /proc/sys/net/krtsproxyd:
+ 
+	Name		Default		Description
+
+       serverip         #            The IP address of the proxy server
+       
+	serverport	554		The port where kRtspProxyd listens on
+
+
+	threads		1		The number of server-threads. Basically, the number of 
+	                                   CPUs you machine has decides the value of this parameter
+
+	documentroot	/var/cache-root	the directory where the
+					caching files are---Keep for future use!
+
+	start		0		Set to 1 to start kRtspProxyd 
+					(this also resets "stop" to 0)
+
+	stop		0		Set to 1 to stop kRtspProxyd
+					(this also resets "start" to 0)
+
+	unload		0		Set to 1 to prepare kRtspProxyd for
+					unloading of the module
+	
+	maxconnect	50		Maximum number of concurrent
+					connections
+
+5. More information
+-------------------
+    Email: kqfan@163.com
+    https://sourceforge.net/projects/krtspproxyd/
