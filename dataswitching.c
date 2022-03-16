@@ -6,9 +6,11 @@
   *
   */
 
-#include <linux/config.h>
+//#include <linux/config.h>
+//atfer linux kernel 2.6.19, it doesn't have the config.h, so it can include the autoconf.h file. 
 #include <linux/kernel.h>
-#include <linux/locks.h>
+//Ryan remove these code.
+//#include <linux/locks.h>
 #include <linux/skbuff.h>
 
 #include <linux/errno.h>
@@ -18,7 +20,9 @@
 #include <linux/inet.h>
 
 #include <asm/uaccess.h>
-#include <linux/smp_lock.h>
+//Ryan added this code.
+#include <linux/hardirq.h>
+//#include <linux/smp_lock.h>
 
 #include "structure.h"
 #include "prototypes.h"
@@ -51,7 +55,9 @@ int DataSwitching(const int CPUNR)
       again:
               
 	       doit = NULL;
-             if(!skb_queue_empty(&(cur->socket->sk->receive_queue)))//have we gotten data till now?
+             //after linux kernel 5.0, the receive_queue changed to sk_receive_queue.
+             //if(!skb_queue_empty(&(cur->socket->sk->receive_queue)))//have we gotten data till now?
+	       		if(!skb_queue_empty(&(cur->socket->sk->sk_receive_queue)))//have we gotten data till now?
             	{
 	       ret = UdpReceiveBuffer(cur->socket, buf, 2048, 0, (struct sockaddr *)&sin, &addr_len);
 		if (ret > 0) {            

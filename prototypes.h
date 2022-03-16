@@ -2,7 +2,8 @@
 #define _KRTSPROXYD_PROTOTYPES_H
 
 
-#include <linux/config.h>
+//#include <linux/config.h>
+//atfer linux kernel 2.6.19, it doesn't have the config.h, so it can include the autoconf.h file. 
 #include <linux/kernel.h>
 #include <linux/net.h>
 #include <linux/time.h>
@@ -36,7 +37,9 @@ extern int sysctl_krtsproxyd_stop;
 /* main.c */
 extern struct krtsproxyd_threadinfo threadinfo[CONFIG_KRTSPROXYD_NUMCPU];
 extern atomic_t ConnectCount;
-extern struct wait_queue main_wait[CONFIG_KRTSPROXYD_NUMCPU];
+extern struct wait_queue_head main_wait[CONFIG_KRTSPROXYD_NUMCPU];//Ryan added this code.
+//Note: after linux kernel 4.0, it doesn't define wait_queue, change to wait_queue_head
+//extern struct wait_queue main_wait[CONFIG_KRTSPROXYD_NUMCPU];
 
 /* misc.c */
 

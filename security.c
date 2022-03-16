@@ -31,7 +31,9 @@ Permissions/Security functions
 #include <linux/net.h>
 #include <linux/sched.h>
 #include <linux/skbuff.h>
-#include <linux/smp_lock.h>
+//Ryan added this code.
+#include <linux/hardirq.h>
+//#include <linux/smp_lock.h>
 #include <linux/un.h>
 #include <linux/unistd.h>
 

@@ -31,14 +31,18 @@ General useful functions
 #include <linux/skbuff.h>
 #include <linux/unistd.h>
 #include <linux/file.h>
-#include <linux/smp_lock.h>
+//Ryan added this code.
+#include <linux/hardirq.h>
+//#include <linux/smp_lock.h>
 
 #include <net/ip.h>
 #include <net/sock.h>
 
 #include <asm/atomic.h>
 #include <asm/errno.h>
-#include <asm/semaphore.h>
+//after Linux kernel 5.0, the semaphore.h was moved to the linux folder.
+//#include <asm/semaphore.h>
+#include <linux/semaphore.h>
 #include <asm/processor.h>
 #include <asm/uaccess.h>
 

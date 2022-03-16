@@ -3,6 +3,7 @@
 
 
 #include <asm/unistd.h>
+#include <linux/wait.h>
 #include "prototypes.h"
 #include "structure.h"
 #include "sysctl.h"
@@ -118,7 +119,8 @@ typedef struct rtsp_session {
 	int		transaction_type;
 	char	*sessionID;
 
-       wait_queue_t sleep;	/* For putting in the socket's waitqueue */
+		wait_queue_entry_t sleep; // after the linux kernel 4.5, it doesn't define the wait_queue_t.
+       //wait_queue_t sleep;	/* For putting in the socket's waitqueue */
 
 	int		cur_trk;
 	int		numTracks;

@@ -46,7 +46,8 @@ And thanks to the genius programmers of apple Corporation, because most of the R
 static int errno;
 #define __KERNEL_SYSCALLS__
 
-#include <linux/config.h>
+//#include <linux/config.h>
+//atfer linux kernel 2.6.19, it doesn't have the config.h, so it can include the autoconf.h file. 
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>

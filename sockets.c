@@ -26,7 +26,9 @@ Basic socket functions
 #include <linux/kernel.h>
 #include <linux/net.h>
 #include <linux/version.h>
-#include <linux/smp_lock.h>
+//Ryan added this code.
+#include <linux/hardirq.h>
+//#include <linux/smp_lock.h>
 #include <net/sock.h>
 
 
