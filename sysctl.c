@@ -29,7 +29,9 @@ Sysctl interface
 #include <linux/net.h>
 #include <linux/sched.h>
 #include <linux/skbuff.h>
-#include <linux/smp_lock.h>
+//Ryan added this code.
+#include <linux/hardirq.h>
+//#include <linux/smp_lock.h>
 #include <linux/sysctl.h>
 #include <linux/un.h>
 #include <linux/unistd.h>
@@ -39,7 +41,9 @@ Sysctl interface
 #include <net/tcp.h>
 
 #include <asm/atomic.h>
-#include <asm/semaphore.h>
+//after Linux kernel 5.0, the semaphore.h was moved to the linux folder.
+//#include <asm/semaphore.h>
+#include <linux/semaphore.h>
 #include <asm/processor.h>
 #include <asm/uaccess.h>
 
@@ -68,14 +72,24 @@ int	sysctl_krtsproxyd_maxconnect = 50;
 
 static struct ctl_table_header *krtsproxyd_table_header;
 
-static int sysctl_SecureString(ctl_table *table, int *name, int nlen,
+//after Linux kernel 5.0, the ctl_table changed to struct.
+//static int sysctl_SecureString(ctl_table *table, int *name, int nlen,
+//		  void *oldval, size_t *oldlenp,
+//		  void *newval, size_t newlen, void **context);
+static int sysctl_SecureString(struct ctl_table *table, int *name, int nlen,
 		  void *oldval, size_t *oldlenp,
 		  void *newval, size_t newlen, void **context);
-static int proc_dosecurestring(ctl_table *table, int write, struct file *filp,
+
+
+//after Linux kernel 5.0, the ctl_table changed to struct.
+//static int proc_dosecurestring(ctl_table *table, int write, struct file *filp,
+//		  void *buffer, size_t *lenp);
+static int proc_dosecurestring(struct ctl_table *table, int write, struct file *filp,
 		  void *buffer, size_t *lenp);
 
-
-static ctl_table krtsproxyd_table[] = {
+//after Linux kernel 5.0, the ctl_table changed to struct.
+//static ctl_table krtsproxyd_table[] = {
+/*static struct ctl_table krtsproxyd_table[] = {
 	{	NET_KRTSPROXYD_CACHEROOT,
 		"cacheroot",
 		&sysctl_krtsproxyd_cacheroot,
@@ -246,22 +260,55 @@ static ctl_table krtsproxyd_table[] = {
 	},
 
 	{0,0,0,0,0,0,0,0,0,0,0}	};
-	
-	
-static ctl_table krtsproxyd_dir_table[] = {
-	{NET_KRTSPROXYD, "krtsproxyd", NULL, 0, 0555, krtsproxyd_table,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0}
+
+example : 
+/*struct ctl_table
+{
+    const char *procname; /* Text ID for /proc/sys, or zero */
+    /*void *data;
+    int maxlen;
+    mode_t mode;
+    struct ctl_table *child;
+    struct ctl_table *parent; /* Automatically set */
+    /*proc_handler *proc_handler; /* Callback for text         formatting */
+    /*void *extra1;
+    void *extra2;
 };
 
-static ctl_table krtsproxyd_root_table[] = {
-	{CTL_NET, "net", NULL, 0, 0555, krtsproxyd_dir_table,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0}
+
+	*/
+static struct ctl_table krtsproxyd_table[] = {
+	{}
+};
+	
+	
+static struct ctl_table krtsproxyd_dir_table[] = {
+	// {NET_KRTSPROXYD, "krtsproxyd", NULL, 0, 0555, krtsproxyd_table,0,0,0,0,0},
+	// {0,0,0,0,0,0,0,0,0,0,0}
+	{
+		.procname	= "krtspproxyd",
+		.mode		= 0555,
+		.child		= krtsproxyd_table,
+	},
+	{}
+};
+
+static struct ctl_table krtsproxyd_root_table[] = {
+	// {CTL_NET, "net", NULL, 0, 0555, krtsproxyd_dir_table,0,0,0,0,0},
+	// {0,0,0,0,0,0,0,0,0,0,0}
+	{
+		.procname	= "net",
+		.mode		= 0555,
+		.child		= krtsproxyd_dir_table,
+	},
+	{}
 };
 	
 
 void StartSysctl(void)
 {
-	krtsproxyd_table_header = register_sysctl_table(krtsproxyd_root_table,1);
+	//krtsproxyd_table_header = register_sysctl_table(krtsproxyd_root_table,1);
+	krtsproxyd_table_header = register_sysctl_table(krtsproxyd_root_table);
 }
 
 
@@ -270,7 +317,7 @@ void EndSysctl(void)
 	unregister_sysctl_table(krtsproxyd_table_header);
 }
 
-static int proc_dosecurestring(ctl_table *table, int write, struct file *filp,
+static int proc_dosecurestring(struct ctl_table *table, int write, struct file *filp,
 		  void *buffer, size_t *lenp)
 {
 	size_t len;
@@ -321,7 +368,7 @@ static int proc_dosecurestring(ctl_table *table, int write, struct file *filp,
 	return 0;
 }
 
-static int sysctl_SecureString (/*@unused@*/ctl_table *table, 
+static int sysctl_SecureString (/*@unused@*/ struct ctl_table *table, 
 				/*@unused@*/int *name, 
 				/*@unused@*/int nlen,
 		  		/*@unused@*/void *oldval, 

@@ -20,10 +20,13 @@ kRtspProxyd
  *
  ****************************************************************/
 
-#include <linux/config.h>
+//#include <linux/config.h>
+//atfer linux kernel 2.6.19, it doesn't have the config.h, so it can include the autoconf.h file. 
 #include <linux/kernel.h>
 #include <linux/skbuff.h>
-#include <linux/smp_lock.h>
+//Ryan added this code.
+#include <linux/hardirq.h>
+//#include <linux/smp_lock.h>
 #include <linux/file.h>
 #include <asm/uaccess.h>
 #include <linux/errno.h>
@@ -41,7 +44,9 @@ static char *Buffer[CONFIG_KRTSPROXYD_NUMCPU];
 
 void make_socket_nonblocking(struct socket *skt)
 {
-   skt->sk->proc |= O_NONBLOCK; //fix me???
+
+   //skt->sk->proc |= O_NONBLOCK; //fix me???
+	skt->file->f_flags = O_NONBLOCK;
 }
 
 static char *find_transport_header(char *inp)
@@ -132,7 +137,7 @@ int process_session(rtsp_session *s, const int CPUNR)
 	pBuf = s->cinbuf + s->amtInClientInBuffer;
        canRead = RTSP_SESSION_BUF_SIZE - s->amtInClientInBuffer - 1;
 
-    if((s->state == stRecvClientCommand) && (canRead>0) && !skb_queue_empty(&(s->client_skt->sk->receive_queue))){      
+    if((s->state == stRecvClientCommand) && (canRead>0) && !skb_queue_empty(&(s->client_skt->sk->sk_receive_queue))){      
 	/* First, read the data */
         len = ReceiveBuffer(s->client_skt, pBuf, canRead);
 	if(len < 0) { //error occurred!!
@@ -436,7 +441,7 @@ KRTSPROXYD_OUT(KERN_INFO "set s->state to stServerTransactionSend!\n");
 			pBuf = s->sinbuf + s->amtInServerInBuffer;
 
        	       canRead = RTSP_SESSION_BUF_SIZE - s->amtInServerInBuffer - 1;
-                     if (canRead > 0 && !skb_queue_empty(&(s->server_skt->sk->receive_queue))) {
+                     if (canRead > 0 && !skb_queue_empty(&(s->server_skt->sk->sk_receive_queue))) {
 				if ((len = ReceiveBuffer(s->server_skt, pBuf, canRead)) < 0) {
 				 switch (errno) {
 						case EAGAIN:
@@ -777,8 +782,8 @@ int Wait4SessionProcess(const int CPUNR)
               }
 		/* If the connection is lost, remove from queue */
 		
-		if ((CurrentSession->client_skt->sk->state != TCP_ESTABLISHED
-		    && CurrentSession->client_skt->sk->state != TCP_CLOSE_WAIT)
+		if ((CurrentSession->client_skt->sk->sk_state != TCP_ESTABLISHED
+		    && CurrentSession->client_skt->sk->sk_state != TCP_CLOSE_WAIT)
 		    ||CurrentSession->die)
 		{
 			struct rtsp_session*Next;

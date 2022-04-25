@@ -42,7 +42,9 @@ Permissions/Security functions
 #include <net/tcp.h>
 
 #include <asm/atomic.h>
-#include <asm/semaphore.h>
+//after Linux kernel 5.0, the semaphore.h was moved to the linux folder.
+//#include <asm/semaphore.h>
+#include <linux/semaphore.h>
 #include <asm/processor.h>
 #include <asm/uaccess.h>
 

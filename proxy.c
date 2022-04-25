@@ -10,6 +10,7 @@
 #include <linux/net.h>
 #include <net/sock.h>
 #include <linux/inet.h>
+#include <linux/gfp.h>
 #include "proxy.h"
 #include "prototypes.h"
 
@@ -332,7 +333,9 @@ int add_ip_to_list(ipList **list, unsigned int ip)
 void set_socket_reuse_address(struct socket *skt)
 {
 	int i = 1;
-	skt->sk->prot->setsockopt(skt->sk, SOL_SOCKET, SO_REUSEADDR, (char*)&i, sizeof(i));
+	//after linux kernel 5.0
+	//skt->sk->prot->setsockopt(skt->sk, SOL_SOCKET, SO_REUSEADDR, (char*)&i, sizeof(i));
+	skt->ops->setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (char*)&i, sizeof(i));
 }
 
 /**********************************************/
@@ -690,8 +693,10 @@ int UdpSendBuffer(struct socket *sock, void * buff, size_t len, unsigned flags,
 	iov.iov_base=buff;
 	iov.iov_len=len;
 	msg.msg_name=0;
-	msg.msg_iov=&iov;
-	msg.msg_iovlen=1;
+	//after linux kernel 5.0
+	//msg.msg_iov=&iov;
+	//msg.msg_iovlen=1;
+	msg.msg_iter.iov=&iov;
 	msg.msg_control=NULL;
 	msg.msg_controllen=0;
 	msg.msg_namelen=0;
@@ -700,7 +705,9 @@ int UdpSendBuffer(struct socket *sock, void * buff, size_t len, unsigned flags,
         msg.msg_flags = MSG_DONTWAIT;
 
 	oldfs = get_fs(); set_fs(KERNEL_DS);
-       err = sock_sendmsg(sock, &msg, len);
+	//after linux kernel 5.0
+       //err = sock_sendmsg(sock, &msg, len);
+       err = sock_sendmsg(sock, &msg);
        set_fs(oldfs);
 
 out:
@@ -808,16 +815,20 @@ int UdpReceiveBuffer(struct socket *sock, void * ubuf, size_t size, unsigned fla
 
 	msg.msg_control=NULL;
 	msg.msg_controllen=0;
-	msg.msg_iovlen=1;
-	msg.msg_iov=&iov;
 	iov.iov_len=(size_t)(size-1);
 	iov.iov_base=(void *)ubuf;
+	//after linux kernel 5.0
+	// msg.msg_iovlen=1;
+	// msg.msg_iov=&iov;
+	msg.msg_iter.iov=&iov;
 	msg.msg_name= address;
 	msg.msg_namelen= MAX_SOCK_ADDR;
 	msg.msg_flags = 0;    
  
         oldfs = get_fs(); set_fs(KERNEL_DS);
-	err = sock_recvmsg(sock, &msg, size-1, MSG_DONTWAIT);
+        //after linux kernel 5.0
+	//err = sock_recvmsg(sock, &msg, size-1, MSG_DONTWAIT);
+	err = sock_recvmsg(sock, &msg, MSG_DONTWAIT);
 	set_fs(oldfs);
 	if(err >= 0)
          {
@@ -888,20 +899,20 @@ rtsp_session *new_session(void)
 		s->numTracks = 0;
 
               //init buffers
-              s->cinbuf = (char*)get_free_page((int)GFP_KERNEL);
+              s->cinbuf = (char*)__get_free_page((int)GFP_KERNEL);
 		if (s->cinbuf == NULL) 
 		{
 			KRTSPROXYD_OUT(KERN_CRIT "kRtspProxyd: Not enough memory for basic needs\n");
 			return NULL;
 		}
-              s->coutbuf = (char*)get_free_page((int)GFP_KERNEL);
+              s->coutbuf = (char*)__get_free_page((int)GFP_KERNEL);
 		if (s->coutbuf == NULL) 
 		{
 			KRTSPROXYD_OUT(KERN_CRIT "kRtspProxyd: Not enough memory for basic needs\n");
 			free_page((unsigned long)s->cinbuf);
 			return NULL;
 		} 
-		s->sinbuf = (char*)get_free_page((int)GFP_KERNEL);
+		s->sinbuf = (char*)__get_free_page((int)GFP_KERNEL);
 		if (s->sinbuf == NULL) 
 		{
 			KRTSPROXYD_OUT(KERN_CRIT "kRtspProxyd: Not enough memory for basic needs\n");
@@ -909,7 +920,7 @@ rtsp_session *new_session(void)
 			free_page((unsigned long)s->coutbuf);
 			return NULL;
 		} 
-		s->soutbuf = (char*)get_free_page((int)GFP_KERNEL);
+		s->soutbuf = (char*)__get_free_page((int)GFP_KERNEL);
 		if (s->soutbuf == NULL) 
 		{
 			KRTSPROXYD_OUT(KERN_CRIT "kRtspProxyd: Not enough memory for basic needs\n");

@@ -85,18 +85,28 @@ static void ReadRest(struct socket *sock)
 
 		msg.msg_name     = 0;
 		msg.msg_namelen  = 0;
-		msg.msg_iov	 = &iov;
-		msg.msg_iovlen   = 1;
+		//after the linux kernel 5.0, the msghdr struct change msg_iov to msg_iter.
+		//msg.msg_iov	 = &iov;
+		//msg.msg_iovlen   = 1;
+		iov.iov_base = &Buffer[0];
+		iov.iov_len  = (__kernel_size_t)1024;
+		msg.msg_iter.iov     = &iov;
 		msg.msg_control  = NULL;
 		msg.msg_controllen = 0;
 		msg.msg_flags    = MSG_DONTWAIT;
-	
-		msg.msg_iov->iov_base = &Buffer[0];
-		msg.msg_iov->iov_len  = (__kernel_size_t)1024;
-	
+		//after the linux kernel 5.0, the msghdr struct change msg_iov to msg_iter.
+		//msg.msg_iov->iov_base = &Buffer[0];
+		//msg.msg_iov->iov_len  = (__kernel_size_t)1024;
+		//msg.msg_iter.iov_base = &Buffer[0];
+		//msg.msg_iter.iov_len  = (__kernel_size_t)1024;
+
+
 		len = 0;
 		oldfs = get_fs(); set_fs(KERNEL_DS);
-		len = sock_recvmsg(sock,&msg,1024,MSG_DONTWAIT);
+		
+		//after Linux kernel 5.0, the sock_recvmsg changed to three elements.
+		//len = sock_recvmsg(sock,&msg,1024,MSG_DONTWAIT);
+		len = sock_recvmsg(sock,&msg,MSG_DONTWAIT);
 		set_fs(oldfs);
 	}
 	LeaveFunction("ReadRest");
@@ -111,7 +121,9 @@ void CleanUpSession(struct rtsp_session *session, const int CPUNR)
 	if ((session->client_skt!=NULL)&&(session->client_skt->sk!=NULL))
 	{
 		ReadRest(session->client_skt);
-		remove_wait_queue(session->client_skt->sk->sleep,&(session->sleep));
+		//after the linux kernel 5.0, remove sk->sleep and add sk_sleep function.
+		//remove_wait_queue(session->client_skt->sk->sleep,&(session->sleep));
+	    	remove_wait_queue(sk_sleep(session->client_skt->sk),&(session->sleep));
 	    	sock_release(session->client_skt);
 	    	session->client_skt = NULL;
 	}
@@ -218,17 +230,24 @@ int SendBuffer(struct socket *sock, const char *Buffer,const size_t Length)
 	
 	msg.msg_name     = 0;
 	msg.msg_namelen  = 0;
-	msg.msg_iov	 = &iov;
-	msg.msg_iovlen   = 1;
+	//after the linux kernel 5.0, the msghdr struct change msg_iov to msg_iter.
+	iov.iov_base = (void*) Buffer;
+	iov.iov_len  = (__kernel_size_t)Length;
+	msg.msg_iter.iov     = &iov;
+	// msg.msg_iov	 = &iov;
+	// msg.msg_iovlen   = 1;
 	msg.msg_control  = NULL;
 	msg.msg_controllen = 0;
-	msg.msg_flags    = MSG_NOSIGNAL;    
-	msg.msg_iov->iov_len = (__kernel_size_t)Length;
-	msg.msg_iov->iov_base = (void*) Buffer;
+	msg.msg_flags    = MSG_NOSIGNAL; 
+	//after the linux kernel 5.0, the msghdr struct change msg_iov to msg_iter.   
+	// msg.msg_iov->iov_len = (__kernel_size_t)Length;
+	// msg.msg_iov->iov_base = (void*) Buffer;
 		
 	len = 0;
 	oldfs = get_fs(); set_fs(KERNEL_DS);
-	len = sock_sendmsg(sock,&msg,(size_t)(Length-len));
+	//after the linux kernel 5.0, the sock_sendmsg function change to two elements.
+	//len = sock_sendmsg(sock,&msg,(size_t)(Length-len));
+	len = sock_sendmsg(sock, &msg);
 	set_fs(oldfs);
 	LeaveFunction("SendBuffer");
 	return len;	
@@ -245,20 +264,27 @@ int SendBuffer_async(struct socket *sock, const char *Buffer,const size_t Length
 	EnterFunction("SendBuffer_async");
 	msg.msg_name     = 0;
 	msg.msg_namelen  = 0;
-	msg.msg_iov	 = &iov;
-	msg.msg_iovlen   = 1;
+	//after the linux kernel 5.0, the msghdr struct change msg_iov to msg_iter.
+	iov.iov_base = (void*) Buffer;
+	iov.iov_len  = (__kernel_size_t)Length;
+	msg.msg_iter.iov     = &iov;
+	//msg.msg_iov	 = &iov;
+	//msg.msg_iovlen   = 1;
 	msg.msg_control  = NULL;
 	msg.msg_controllen = 0;
-	msg.msg_flags    = MSG_DONTWAIT|MSG_NOSIGNAL;    
-	msg.msg_iov->iov_base = (void*) Buffer;
-	msg.msg_iov->iov_len  = (__kernel_size_t)Length;
+	msg.msg_flags    = MSG_DONTWAIT|MSG_NOSIGNAL;
+	//after the linux kernel 5.0, the msghdr struct change msg_iov to msg_iter.    
+	// msg.msg_iov->iov_base = (void*) Buffer;
+	// msg.msg_iov->iov_len  = (__kernel_size_t)Length;
 	
 
 	if (sock->sk)
 	{
               KRTSPROXYD_OUT(KERN_ERR "the sock->sk != NULL\n");	
 		oldfs = get_fs(); set_fs(KERNEL_DS);
-		len = sock_sendmsg(sock,&msg,(size_t)(Length));
+		//after the linux kernel 5.0, the sock_sendmsg function change to two elements.
+		//len = sock_sendmsg(sock,&msg,(size_t)(Length));
+		len = sock_sendmsg(sock, &msg);
 		set_fs(oldfs);
 	} else
 	{
@@ -285,19 +311,25 @@ int ReceiveBuffer(struct socket *sock,void *my_msg,int size){
                } 
 	msg.msg_name     = 0;
 	msg.msg_namelen  = 0;
-	msg.msg_iov	 = &iov;
-	msg.msg_iovlen   = 1;
+	//after the linux kernel 5.0, the msghdr struct change msg_iov to msg_iter.
+	iov.iov_base = my_msg;
+	iov.iov_len  = (size_t)size;
+	msg.msg_iter.iov     = &iov;
+	//msg.msg_iov	 = &iov;
+	//msg.msg_iovlen   = 1;
 	msg.msg_control  = NULL;
 	msg.msg_controllen = 0;
 	msg.msg_flags    = 0;
-	msg.msg_iov->iov_base = my_msg;
-	msg.msg_iov->iov_len  = (size_t)size;
+	// msg.msg_iov->iov_base = my_msg;
+	// msg.msg_iov->iov_len  = (size_t)size;
 	len = 0;
 
 	oldfs = get_fs(); set_fs(KERNEL_DS);
       
 	KRTSPROXYD_OUT(KERN_INFO "before sock_recvmsg\n");
-	len = sock_recvmsg(sock,&msg,size, MSG_NOSIGNAL|MSG_DONTWAIT);
+	//after the linux kernel 5.0, the sock_recvmsg function change to three elements.
+	//len = sock_recvmsg(sock,&msg,size, MSG_NOSIGNAL|MSG_DONTWAIT);
+	len = sock_recvmsg(sock,&msg, MSG_NOSIGNAL|MSG_DONTWAIT);
 
 	set_fs(oldfs);
 	KRTSPROXYD_OUT(KERN_INFO "recvmsg returned len=%d\n",len);

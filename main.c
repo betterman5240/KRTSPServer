@@ -42,8 +42,8 @@ And thanks to the genius programmers of apple Corporation, because most of the R
  *
  ****************************************************************/
 
-
-static int errno;
+//Ryan Fixes compiler error.
+//static int errno;
 #define __KERNEL_SYSCALLS__
 
 //#include <linux/config.h>
@@ -54,9 +54,14 @@ static int errno;
 #include <linux/signal.h>
 #include <linux/init.h>
 #include <linux/wait.h>
-#include <linux/smp_lock.h>
+//Ryan added this code.
+#include <linux/hardirq.h>
+//#include <linux/smp_lock.h>
 #include <linux/inet.h>
 #include <asm/unistd.h>
+
+//Ryan added this code
+#include <linux/errno.h>
 
 #include "structure.h"
 #include "prototypes.h"
@@ -64,6 +69,8 @@ static int errno;
 
 struct krtsproxyd_threadinfo threadinfo[CONFIG_KRTSPROXYD_NUMCPU];  /* The actual work-queues */
 
+//Ryan added these code
+extern int errno;
 
 atomic_t	ConnectCount;
 atomic_t	DaemonCount;
@@ -89,7 +96,7 @@ static int MainDaemon(void *cpu_pointer)
 	sigset_t tmpsig;
 	DECLARE_WAITQUEUE(main_wait,current);
 	
-	MOD_INC_USE_COUNT;
+	//MOD_INC_USE_COUNT;
 
 	
 	CPUNR=0;
@@ -97,7 +104,7 @@ static int MainDaemon(void *cpu_pointer)
 	CPUNR=(int)*(int*)cpu_pointer;
 
 	sprintf(current->comm,"kRtspProxyd - C%i",CPUNR);
-	daemonize();
+	//daemonize();
 	
 	init_waitqueue_head(&(DummyWQ[CPUNR]));
 	
@@ -113,7 +120,9 @@ static int MainDaemon(void *cpu_pointer)
 	
 	if (MainSocket->sk==NULL)
 	 	return 0;
-	add_wait_queue_exclusive(MainSocket->sk->sleep,&(main_wait));
+	//Kernel 5.0 , the sk->sleep change to sk_sleep()
+	//add_wait_queue_exclusive(MainSocket->sk->sleep,&(main_wait));
+	add_wait_queue_exclusive(sk_sleep(MainSocket->sk),&(main_wait));
 	atomic_inc(&DaemonCount);
 	atomic_set(&Running[CPUNR],1);
 	
@@ -137,7 +146,9 @@ static int MainDaemon(void *cpu_pointer)
 		if (changes==0) 
 		{
                      KRTSPROXYD_OUT(KERN_INFO "changes = 0!\n");
-			(void)interruptible_sleep_on_timeout(&(DummyWQ[CPUNR]), 1);	
+			//linux kenel remove interruptible_sleep_on_time in the kernel 5.0 
+			//(void)interruptible_sleep_on_timeout(&(DummyWQ[CPUNR]), 1);
+			wait_event_interruptible_timeout(DummyWQ[CPUNR],(changes == 0),1);	
 
 		}
 			
@@ -148,15 +159,17 @@ static int MainDaemon(void *cpu_pointer)
 		}
 	
 	}
-	
-	remove_wait_queue(MainSocket->sk->sleep,&(main_wait));
-	
+	//Kernel 5.0 , the sk->sleep change to sk_sleep()
+	//remove_wait_queue(MainSocket->sk->sleep,&(main_wait));
+	remove_wait_queue(sk_sleep(MainSocket->sk),&(main_wait));
+
+
 	StopSessionProcess(CPUNR);
 			
 	atomic_set(&Running[CPUNR],0);
 	atomic_dec(&DaemonCount);
 	KRTSPROXYD_OUT(KERN_NOTICE "kRtspProxyd: Main Daemon %i has ended\n",CPUNR);
-	MOD_DEC_USE_COUNT;
+	//MOD_DEC_USE_COUNT;
 	return 0;
 }
 
@@ -180,7 +193,7 @@ static int ManagementDaemon(void *unused)
 	
 	
 	sprintf(current->comm,"KRtspProxyd manager");
-	daemonize();
+	//daemonize();
 	
 
 	/* Block all signals except SIGKILL and SIGSTOP */
@@ -205,7 +218,9 @@ static int ManagementDaemon(void *unused)
                 while(strcmp(sysctl_krtsproxyd_serverip,"#") == 0 && (!signal_pending(current)))
                 {
                   current->state = TASK_INTERRUPTIBLE;
-                  interruptible_sleep_on_timeout(&WQ, HZ);
+                  //linux kenel remove interruptible_sleep_on_time in the kernel 5.0 
+									//interruptible_sleep_on_timeout(&WQ, HZ);
+									wait_event_interruptible_timeout(WQ,strcmp(sysctl_krtsproxyd_serverip,"#") == 0 && (!signal_pending(current)) ,HZ);
 	        }
                 
                 /*set IP address*/
@@ -214,7 +229,9 @@ static int ManagementDaemon(void *unused)
 		while ( (sysctl_krtsproxyd_start==0) && (!signal_pending(current)) && (sysctl_krtsproxyd_unload==0) )
 		{
 			current->state = TASK_INTERRUPTIBLE;
-			interruptible_sleep_on_timeout(&WQ,HZ); 
+			//linux kenel remove interruptible_sleep_on_time in the kernel 5.0 
+			//interruptible_sleep_on_timeout(&WQ, HZ);
+			wait_event_interruptible_timeout(WQ,(sysctl_krtsproxyd_start==0) && (!signal_pending(current)) && (sysctl_krtsproxyd_unload==0) ,HZ);
 		}
 		
 		if ( (signal_pending(current)) || (sysctl_krtsproxyd_unload!=0) )
@@ -267,10 +284,13 @@ static int ManagementDaemon(void *unused)
 					I++;
 				}
 			}
-			interruptible_sleep_on_timeout(&WQ,HZ);
+			//linux kenel remove interruptible_sleep_on_time in the kernel 5.0 
+			//interruptible_sleep_on_timeout(&WQ, HZ);
+			wait_event_interruptible_timeout(WQ,( (sysctl_krtsproxyd_stop==0) && (!signal_pending(current)) && (sysctl_krtsproxyd_unload==0) ),HZ);
 			
 			/* reap the daemons */
-			waitpid_result = waitpid(-1,NULL,__WCLONE|WNOHANG);
+			//linux kernel 5.0 removed daemonize function. so I try to mask these codes.
+			//waitpid_result = waitpid(-1,NULL,__WCLONE|WNOHANG);
 			
 		}
 		
@@ -279,8 +299,11 @@ static int ManagementDaemon(void *unused)
 		if (sysctl_krtsproxyd_stop!=0)	
 		{
 			/* Wait for the daemons to stop, one second per iteration */
-			while (atomic_read(&DaemonCount)>0)
-		 		interruptible_sleep_on_timeout(&WQ,HZ);
+			while (atomic_read(&DaemonCount)>0){
+		 	//linux kenel remove interruptible_sleep_on_time in the kernel 5.0 
+			//interruptible_sleep_on_timeout(&WQ, HZ);
+			wait_event_interruptible_timeout(WQ,(atomic_read(&DaemonCount)>0),HZ);
+			}
 			StopListening();
 		}
 	
@@ -289,21 +312,24 @@ static int ManagementDaemon(void *unused)
 	sysctl_krtsproxyd_stop = 1;
 
 	/* Wait for the daemons to stop, one second per iteration */
-	while (atomic_read(&DaemonCount)>0)
- 		interruptible_sleep_on_timeout(&WQ,HZ);
+	while (atomic_read(&DaemonCount)>0){
+ 		//linux kenel remove interruptible_sleep_on_time in the kernel 5.0 
+		//interruptible_sleep_on_timeout(&WQ, HZ);
+		wait_event_interruptible_timeout(WQ,(atomic_read(&DaemonCount)>0),HZ);
+	}
 		
-		
-	waitpid_result = 1;
+	//linux kernel 5.0 removed daemonize function. so I try to mask these codes.
+	//waitpid_result = 1;
 	/* reap the zombie-daemons */
-	while (waitpid_result>0)
-		waitpid_result = waitpid(-1,NULL,__WCLONE|WNOHANG);
+	//while (waitpid_result>0)
+	//	waitpid_result = waitpid(-1,NULL,__WCLONE|WNOHANG);
 		
 	StopListening();
 	
 	
 	KRTSPROXYD_OUT(KERN_NOTICE "kRtspProxyd: Management daemon stopped. \n And you can unload the module now.\n");
 
-	MOD_DEC_USE_COUNT;
+	//MOD_DEC_USE_COUNT;
 
 	return 0;
 }
@@ -312,7 +338,7 @@ int __init kRtspProxyd_init(void)
 {
 	int I;
 
-	MOD_INC_USE_COUNT;
+	//MOD_INC_USE_COUNT;
 	
 	I=0;
 	while (I<CONFIG_KRTSPROXYD_NUMCPU)

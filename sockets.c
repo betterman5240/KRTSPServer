@@ -77,7 +77,9 @@ int StartListening(const int Port)
         KRTSPROXYD_OUT(KERN_INFO "bind success!\n");
 
 	/* Grrr... setsockopt() does this. */
-	sock->sk->reuse   = 1;
+	//after the linux kernel 5.0, the sock sturct change reuse to sk_reuse.
+	//sock->sk->reuse   = 1;
+      sock->sk->sk_reuse = 1;
 
 	/* Now, start listening on the socket */
 	
